@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles.css">
+  <script src="state.js"></script>
+  <title>Hakoiri Solutions Visualizer</title>
+</head>
+<body class="body">
+  <div class="inputControls">
+    <h1 class="heading">Hakoiri solution visualizer</h1>
+    <label for="fileInput">Load a solution:</label>
+    <input type="file" id="fileInput" accept=".txt" >
+  </div>
+
+  <div id="steps">
+    <div class="totalStepsContainer">
+      <label>Solution Total Steps: </label>
+      <span class="totalStepsCount"></span>
+    </div>
+  </div>
+
+  <div id="solution">
+    <div class="grid">
+
+    </div>
+  </div>
+
+  <div id="solutionsNavigation">
+    <div class="solutionNavigationInner">
+      <div class="stepDisplay">
+        <label>Step: </label>
+        <span class="currentStep"></span>
+      </div>
+
+      <div class="sliderContainer">
+        <input type="range" min="1" max="100" value="1" class="solutionsSlider"
+          oninput="sliderMoved(this.value)"
+          onChange="sliderMoved(this.value)">
+      </div>
+
+      <div class="manualStepInputWrapper">
+        <label>Go to step:</label>
+        <input type="number" class="manualInput">
+        <button onclick="goToStep()">Go</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="footer">
+
+  </div>
+
+</body>
+</html>

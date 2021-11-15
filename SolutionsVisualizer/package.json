@@ -1,0 +1,14 @@
+{
+  "name": "HakoiriSolutionsVisualizer",
+  "version": "1.0.0",
+  "description": "nou",
+  "main": "state.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "readline": "^1.3.0"
+  }
+}

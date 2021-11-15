@@ -1,0 +1,139 @@
+.inputControls {
+  flex: 1.5;
+  text-align: center;
+}
+
+.heading {
+  text-align: center;
+}
+
+html, .body {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  margin: 0;
+}
+
+#steps {
+  height: 3rem;
+  width: 100%;
+  background-color:azure;
+}
+
+#solution {
+  width: 100%;
+
+  flex: 9;
+  background: linear-gradient(90deg, rgb(93, 255, 44) 0%, rgb(0, 253, 253) 70%);
+}
+
+#solutionsNavigation {   
+  flex: 2;
+}
+
+#footer {
+  width: 100%;
+
+  flex: 2;
+  background-color: darkseagreen;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 100px 100px 100px 100px;
+  grid-gap: 0px;
+}
+.grid gridDiv {  
+  aspect-ratio: 1;
+}
+
+/* hidden initially and will be displayed on solution load */
+.solutionNavigationInner { 
+  padding-top: 30;
+  height: 100%;
+
+  display: flex;
+  flex-direction: column; 
+  
+  display: none;
+}
+
+.sliderContainer {
+  flex-basis: 30%;
+  margin-left : 20%;
+  margin-right: 20%;
+}
+
+.stepDisplay, .manualStepInputWrapper {  
+  font-size: larger;
+  
+  margin: 0 auto 0 auto;
+  flex-basis: 20%;
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+.solutionsSlider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 25px;
+  background: #d3d3d3;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+
+.solutionsSlider:hover {
+  opacity: 1;
+}
+
+.solutionsSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 25px;
+  height: 25px;
+  background: #04AA6D;
+  cursor: pointer;
+}
+
+.solutionsSlider::-moz-range-thumb {
+  width: 25px;
+  height: 25px;
+  background: #04AA6D;
+  cursor: pointer;
+}
+
+
+#steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* margin: auto; */
+  
+}
+
+.grid {
+  padding-top: 5%;
+  padding-bottom: 5%;
+  margin-left: 40%;
+  margin-right: 40%;
+
+}
+
+.blue {
+  background-color: rgba(7, 83, 204, 0.966);
+}
+
+.red {
+  background-color: red;
+}
+
+.green {
+  background-color: rgb(19, 206, 19);
+}
+
+.orange {
+  background-color: orange;
+}
