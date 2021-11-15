@@ -30,7 +30,7 @@
             { 7, 0, 0, 9 },
         };
         
-        // 7880 steps
+        // 488 steps
         public static byte[,] Level1 = new byte[5, 4]
         {
             { 3, Utils.Red, Utils.Red, 5 },

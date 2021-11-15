@@ -13,10 +13,13 @@ namespace Hakoiri
         static HashSet<string> visitedBoards = new HashSet<string>(1000);
         static Stack<Snapshot> SnapshotsStack = new Stack<Snapshot>(2000);
         static List<Snapshot> backtrackSolutions = new List<Snapshot>(500);
+        static int solveInvocations = 0;
+
+        static int currentBestSolution = int.MaxValue;
 
         static void Main()
         {
-            var level = Levels.Level7;
+            var level = Levels.Level1;
 
             var firstSnapshot = new Snapshot(level);
             SnapshotsStack.Push(firstSnapshot);
@@ -31,11 +34,14 @@ namespace Hakoiri
                 Console.WriteLine("steps " + backtrackSolutions.Count);
                 //PrintAllRefSolutions();
                 SaveRefSolutionsToTxt();
+
             }
             else
             {
                 Console.WriteLine("No solution found");
             }
+
+            Console.WriteLine("Solve Invocs:" + solveInvocations);
         }
 
         private static void SaveRefSolutionsToTxt()
@@ -83,18 +89,163 @@ namespace Hakoiri
             while (SnapshotsStack.Count != 0)
             {
                 var snapshot = SnapshotsStack.Pop();
-                Solve(snapshot);
+                FindMostOptimalSolution(snapshot);
+                //Solve(snapshot);
             }
         }
 
-        public static void Solve(Snapshot snapshot)
+        public static void FindMostOptimalSolution(Snapshot snapshot)
         {
+            solveInvocations++;
+            if (snapshot.Step >= currentBestSolution)
+            {
+                ditchedSolutions++;
+                snapshot.refSnap = null;
+                return;
+            }
+
             var hash = snapshot.GetSnapshotHash();
             if (visitedBoards.Contains(hash))
             {
                 ditchedSolutions++;
+                snapshot.refSnap = null;
                 return;
             }
+
+            visitedBoards.Add(hash);
+
+            if (visitedBoards.Count % 1000 == 0)
+            {
+                Console.WriteLine($"visited Boards {visitedBoards.Count}");
+            }
+
+            if (snapshot.IsSolved())
+            {
+                currentBestSolution = snapshot.Step;
+
+                PrintBoard(snapshot);
+                backtrackSolutions.Clear();
+                backtrackSolutions.Add(snapshot);
+                Solved = true;
+                return;
+            }
+
+            do
+            {
+                var cell = snapshot.GetCell();
+                var shape = Utils.GetShape(cell);
+                (bool possible, Snapshot snapshot) pos;
+                switch (shape)
+                {//try move down, right, left, up
+
+                    case Utils.Shape.Empty:
+                        continue;
+                    case Utils.Shape.Square:
+                        if (!snapshot.IsTopLeftSquare())
+                            continue;
+
+                        pos = TryMoveRedDown(snapshot);
+                        if (pos.possible)
+                            SnapshotsStack.Push(pos.snapshot);
+
+                        pos = TryMoveRedRight(snapshot);
+                        if (pos.possible)
+                            SnapshotsStack.Push(pos.snapshot);
+
+
+                        pos = TryMoveRedLeft(snapshot);
+                        if (pos.possible)
+                            SnapshotsStack.Push(pos.snapshot);
+
+                        pos = TryMoveRedUp(snapshot);
+                        if (pos.possible)                        
+                            SnapshotsStack.Push(pos.snapshot);          
+
+                        break;
+                    case Utils.Shape.Vertical:
+                        if (!snapshot.IsTopmostVertical())
+                        {
+                            continue;
+                        }
+
+                        pos = TryMoveVerticalLeft(snapshot);
+                        if (pos.possible)
+                            SnapshotsStack.Push(pos.snapshot);
+
+                        pos = TryMoveVerticalRight(snapshot);
+                        if (pos.possible)
+                            SnapshotsStack.Push(pos.snapshot);
+
+                        pos = TryMoveVerticalUp(snapshot);
+                        if (pos.possible)
+                            SnapshotsStack.Push(pos.snapshot);
+
+                        pos = TryMoveVerticalDown(snapshot);
+                        if (pos.possible)
+                            SnapshotsStack.Push(pos.snapshot);
+
+                        break;
+                    case Utils.Shape.Horizontal:
+                        if (!snapshot.IsLeftmostHorizontal())
+                        {
+                            continue;
+                        }
+
+                        pos = TryMoveHorizontalUp(snapshot);
+                        if (pos.possible)
+                            SnapshotsStack.Push(pos.snapshot);
+
+                        pos = TryMoveHorizontalLeft(snapshot);
+                        if (pos.possible)
+                            SnapshotsStack.Push(pos.snapshot);
+
+                        pos = TryMoveHorizontalRight(snapshot);
+                        if (pos.possible)
+                            SnapshotsStack.Push(pos.snapshot);
+
+                        pos = TryMoveHorizontalDown(snapshot);
+                        if (pos.possible)
+                            SnapshotsStack.Push(pos.snapshot);
+
+                        break;
+
+                    case Utils.Shape.Single:
+                        pos = TryMoveSingleUp(snapshot);
+                        if (pos.possible)
+                            SnapshotsStack.Push(pos.snapshot);
+
+                        pos = TryMoveSingleLeft(snapshot);
+                        if (pos.possible)
+                            SnapshotsStack.Push(pos.snapshot);
+
+                        pos = TryMoveSingleRight(snapshot);
+                        if (pos.possible)
+                            SnapshotsStack.Push(pos.snapshot);
+
+                        pos = TryMoveSingleDown(snapshot);
+                        if (pos.possible)
+                            SnapshotsStack.Push(pos.snapshot);
+
+                        break;
+                    default:
+                        break;
+                }
+
+            } while (snapshot.Increment());
+            //while (!Solved && snapshot.Increment());
+        }
+
+        public static void Solve(Snapshot snapshot)
+        {
+            solveInvocations++;
+            var hash = snapshot.GetSnapshotHash();
+            if (visitedBoards.Contains(hash))
+            {
+                ditchedSolutions++;
+                snapshot.refSnap = null;
+                return;
+            }
+
             visitedBoards.Add(hash);
 
             if (visitedBoards.Count % 50 == 0)

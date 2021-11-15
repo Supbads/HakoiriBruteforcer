@@ -8,6 +8,7 @@ namespace Hakoiri
         // look indices
         public byte Row { get; set; }
         public byte Col { get; set; }
+        public int Step { get; set; }
 
         public byte[,] BoardSnapshot;
         public Snapshot refSnap;
@@ -17,6 +18,7 @@ namespace Hakoiri
             this.refSnap = snapshot;
             Row = 0;
             Col = 0;
+            Step = snapshot.Step + 1;
         }
 
         public Snapshot(byte[,] board)
@@ -24,6 +26,7 @@ namespace Hakoiri
             BoardSnapshot = Utils.CopyBoard(board);
             Row = 0;
             Col = 0;
+            Step = 1;
         }
 
         public Snapshot(byte[,] board, byte x, byte y)
@@ -36,7 +39,7 @@ namespace Hakoiri
         public bool Increment()
         {
             if(Row == Utils.MaxRow && Col == Utils.MaxCol)
-            { // are we at the end
+            { // we are at the end
                 return false;
             }
 
