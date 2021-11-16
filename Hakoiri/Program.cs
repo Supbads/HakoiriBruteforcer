@@ -11,6 +11,7 @@ namespace Hakoiri
         static bool Solved = false;
         static int ditchedSolutions = 0;
         static HashSet<string> visitedBoards = new HashSet<string>(1000);
+        static Dictionary<string, int> visitedBoardsOptimal = new Dictionary<string, int>();
         static Stack<Snapshot> SnapshotsStack = new Stack<Snapshot>(2000);
         static List<Snapshot> backtrackSolutions = new List<Snapshot>(500);
         static int solveInvocations = 0;
@@ -19,7 +20,7 @@ namespace Hakoiri
 
         static void Main()
         {
-            var level = Levels.Level1;
+            var level = Levels.Level5;
 
             var firstSnapshot = new Snapshot(level);
             SnapshotsStack.Push(firstSnapshot);
@@ -41,7 +42,7 @@ namespace Hakoiri
                 Console.WriteLine("No solution found");
             }
 
-            Console.WriteLine("Solve Invocs:" + solveInvocations);
+            Console.WriteLine("Solve Invocs: " + solveInvocations);
         }
 
         private static void SaveRefSolutionsToTxt()
@@ -88,6 +89,10 @@ namespace Hakoiri
         {
             while (SnapshotsStack.Count != 0)
             {
+                if(SnapshotsStack.Count == 1)
+                {
+                    Console.WriteLine("tuke");
+                }
                 var snapshot = SnapshotsStack.Pop();
                 FindMostOptimalSolution(snapshot);
                 //Solve(snapshot);
@@ -96,6 +101,20 @@ namespace Hakoiri
 
         public static void FindMostOptimalSolution(Snapshot snapshot)
         {
+            if (snapshot.IsSolved())
+            {
+                if(snapshot.Step < currentBestSolution)
+                {
+                    currentBestSolution = snapshot.Step;
+                    backtrackSolutions.Clear();
+                    backtrackSolutions.Add(snapshot);
+                    Solved = true;
+                }
+
+                //PrintBoard(snapshot);
+                return;
+            }
+
             solveInvocations++;
             if (snapshot.Step >= currentBestSolution)
             {
@@ -105,29 +124,26 @@ namespace Hakoiri
             }
 
             var hash = snapshot.GetSnapshotHash();
-            if (visitedBoards.Contains(hash))
+            if (visitedBoardsOptimal.ContainsKey(hash) && visitedBoardsOptimal[hash] <= snapshot.Step)
             {
                 ditchedSolutions++;
                 snapshot.refSnap = null;
                 return;
             }
 
-            visitedBoards.Add(hash);
-
-            if (visitedBoards.Count % 1000 == 0)
+            if (!visitedBoardsOptimal.ContainsKey(hash))
             {
-                Console.WriteLine($"visited Boards {visitedBoards.Count}");
+                visitedBoardsOptimal.Add(hash, snapshot.Step);
             }
-
-            if (snapshot.IsSolved())
+            else
             {
-                currentBestSolution = snapshot.Step;
+                visitedBoardsOptimal[hash] = snapshot.Step;
+            }
+            
 
-                PrintBoard(snapshot);
-                backtrackSolutions.Clear();
-                backtrackSolutions.Add(snapshot);
-                Solved = true;
-                return;
+            if (visitedBoardsOptimal.Count % 1000 == 0)
+            {
+                Console.WriteLine($"visited Boards {visitedBoardsOptimal.Count}");
             }
 
             do
@@ -144,22 +160,22 @@ namespace Hakoiri
                         if (!snapshot.IsTopLeftSquare())
                             continue;
 
-                        pos = TryMoveRedDown(snapshot);
-                        if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
-
+                        
                         pos = TryMoveRedRight(snapshot);
                         if (pos.possible)
                             SnapshotsStack.Push(pos.snapshot);
 
+                        pos = TryMoveRedUp(snapshot);
+                        if (pos.possible)
+                            SnapshotsStack.Push(pos.snapshot);
 
                         pos = TryMoveRedLeft(snapshot);
                         if (pos.possible)
                             SnapshotsStack.Push(pos.snapshot);
 
-                        pos = TryMoveRedUp(snapshot);
-                        if (pos.possible)                        
-                            SnapshotsStack.Push(pos.snapshot);          
+                        pos = TryMoveRedDown(snapshot);
+                        if (pos.possible)
+                            SnapshotsStack.Push(pos.snapshot);
 
                         break;
                     case Utils.Shape.Vertical:

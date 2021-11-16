@@ -29,13 +29,6 @@ namespace Hakoiri
             Step = 1;
         }
 
-        public Snapshot(byte[,] board, byte x, byte y)
-        {
-            BoardSnapshot = Utils.CopyBoard(board);
-            Row = x;
-            Col = y;
-        }
-
         public bool Increment()
         {
             if(Row == Utils.MaxRow && Col == Utils.MaxCol)

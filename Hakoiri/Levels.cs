@@ -11,6 +11,15 @@
             { 0, 1, 1, 0 },
         };
 
+        public static byte[,] NoSolution = new byte[5, 4]
+        {
+            { 3, Utils.Red, Utils.Red, 5 },
+            { 3, Utils.Red, Utils.Red, 5 },
+            { 0, 0, 0, 0 },
+            { 8, 8, 6, 6 },
+            { 2, 2, 4, 4 },
+        };
+
         public static byte[,] LevelTestCompact = new byte[5, 4]
         {
             { 3, Utils.Red, Utils.Red, 5 },
@@ -19,8 +28,17 @@
             { 7, 0, 0, 9 },
             { 1, 0, 0, 9 },
         };
+        public static byte[,] LevelTestCompact2 = new byte[5, 4]
+        {
+            { 0, Utils.Red, Utils.Red, 0 },
+            { 0, Utils.Red, Utils.Red, 0 },
+            { 0, 0, 0, 0 },
+            { 0, 0, 0, 0 },
+            { 0, 0, 0, 0 },
+        };
 
         // 1795 steps
+        // optimized 86
         public static byte[,] Level0 = new byte[5, 4]
         {
             { 3, Utils.Red, Utils.Red, 5 },
@@ -31,6 +49,7 @@
         };
         
         // 488 steps
+        // optimized 81
         public static byte[,] Level1 = new byte[5, 4]
         {
             { 3, Utils.Red, Utils.Red, 5 },
@@ -41,6 +60,7 @@
         };
 
         // 7670 steps
+        // optimized 65
         public static byte[,] Level2 = new byte[5, 4]
         {
             { 3, Utils.Red, Utils.Red, 5 },
@@ -51,6 +71,7 @@
         };
 
         // 271 steps
+        // 49 optimized
         public static byte[,] Level3 = new byte[5, 4]
         {
             { 1, Utils.Red, Utils.Red, 1 },
@@ -61,6 +82,7 @@
         };
 
         // 100 steps
+        // optimized 46 
         public static byte[,] Level4 = new byte[5, 4]
         {
             { 1, Utils.Red, Utils.Red, 1 },
@@ -71,6 +93,7 @@
         };
 
         // 3094 steps
+        // optimized 47
         public static byte[,] Level5 = new byte[5, 4]
         {
             { 3, Utils.Red, Utils.Red, 7 },
@@ -81,6 +104,7 @@
         };
 
         // 1290 steps
+        // optimized 117
         public static byte[,] Level6 = new byte[5, 4]
         {
             { 3, Utils.Red, Utils.Red, 7 },
@@ -90,7 +114,8 @@
             { 1, 0, 0, 1 },
         };
 
-        // 2265 steps
+        // 2265 steps 
+        // optimized 135 
         public static byte[,] Level7 = new byte[5, 4] 
         {
             { 3, Utils.Red, Utils.Red, 5 },
