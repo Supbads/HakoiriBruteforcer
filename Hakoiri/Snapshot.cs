@@ -61,7 +61,7 @@ namespace Hakoiri
 
         public string GetSnapshotHash()
         {
-            var sb = new StringBuilder(); // can be extracted as static for eprf
+            var sb = new StringBuilder(); // can be extracted as static for perf
             
             for (int i = 0; i <= Utils.MaxRow; i++)
             {

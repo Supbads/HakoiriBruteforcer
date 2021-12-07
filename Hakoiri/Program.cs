@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -11,8 +12,8 @@ namespace Hakoiri
         static bool Solved = false;
         static int ditchedSolutions = 0;
         static HashSet<string> visitedBoards = new HashSet<string>(1000);
-        static Dictionary<string, int> visitedBoardsOptimal = new Dictionary<string, int>();
-        static Stack<Snapshot> SnapshotsStack = new Stack<Snapshot>(2000);
+        static Dictionary<string, int> visitedBoardsOptimal = new Dictionary<string, int>(20000); // should be 20k+ to avoid resizing
+        static Queue<Snapshot> SnapshotsStack = new Queue<Snapshot>(2000);
         static List<Snapshot> backtrackSolutions = new List<Snapshot>(500);
         static int solveInvocations = 0;
 
@@ -20,10 +21,11 @@ namespace Hakoiri
 
         static void Main()
         {
-            var level = Levels.Level5;
 
+            var level = Levels.Level7;
+            var sw = Stopwatch.StartNew();
             var firstSnapshot = new Snapshot(level);
-            SnapshotsStack.Push(firstSnapshot);
+            SnapshotsStack.Enqueue(firstSnapshot);
             SolveStack();
 
             if (Solved)
@@ -34,7 +36,7 @@ namespace Hakoiri
                 PrepareSolutionsChain();
                 Console.WriteLine("steps " + backtrackSolutions.Count);
                 //PrintAllRefSolutions();
-                SaveRefSolutionsToTxt();
+                //SaveRefSolutionsToTxt();
 
             }
             else
@@ -42,6 +44,8 @@ namespace Hakoiri
                 Console.WriteLine("No solution found");
             }
 
+            var elapsed = sw.ElapsedMilliseconds;
+            Console.WriteLine(elapsed);
             Console.WriteLine("Solve Invocs: " + solveInvocations);
         }
 
@@ -89,11 +93,11 @@ namespace Hakoiri
         {
             while (SnapshotsStack.Count != 0)
             {
-                if(SnapshotsStack.Count == 1)
-                {
-                    Console.WriteLine("tuke");
-                }
-                var snapshot = SnapshotsStack.Pop();
+                //if(SnapshotsStack.Count == 1)
+                //{
+                //    Console.WriteLine("tuke");
+                //}
+                var snapshot = SnapshotsStack.Dequeue();
                 FindMostOptimalSolution(snapshot);
                 //Solve(snapshot);
             }
@@ -101,9 +105,10 @@ namespace Hakoiri
 
         public static void FindMostOptimalSolution(Snapshot snapshot)
         {
+            solveInvocations++;
             if (snapshot.IsSolved())
             {
-                if(snapshot.Step < currentBestSolution)
+                if (snapshot.Step < currentBestSolution)
                 {
                     currentBestSolution = snapshot.Step;
                     backtrackSolutions.Clear();
@@ -115,7 +120,6 @@ namespace Hakoiri
                 return;
             }
 
-            solveInvocations++;
             if (snapshot.Step >= currentBestSolution)
             {
                 ditchedSolutions++;
@@ -123,23 +127,23 @@ namespace Hakoiri
                 return;
             }
 
-            var hash = snapshot.GetSnapshotHash();
-            if (visitedBoardsOptimal.ContainsKey(hash) && visitedBoardsOptimal[hash] <= snapshot.Step)
+            var positionHash = snapshot.GetSnapshotHash();
+            if (visitedBoardsOptimal.ContainsKey(positionHash) && visitedBoardsOptimal[positionHash] <= snapshot.Step)
             {
                 ditchedSolutions++;
                 snapshot.refSnap = null;
                 return;
             }
 
-            if (!visitedBoardsOptimal.ContainsKey(hash))
+            if (!visitedBoardsOptimal.ContainsKey(positionHash))
             {
-                visitedBoardsOptimal.Add(hash, snapshot.Step);
+                visitedBoardsOptimal.Add(positionHash, snapshot.Step);
             }
             else
             {
-                visitedBoardsOptimal[hash] = snapshot.Step;
+                visitedBoardsOptimal[positionHash] = snapshot.Step;
             }
-            
+
 
             if (visitedBoardsOptimal.Count % 1000 == 0)
             {
@@ -160,22 +164,22 @@ namespace Hakoiri
                         if (!snapshot.IsTopLeftSquare())
                             continue;
 
-                        
+
                         pos = TryMoveRedRight(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveRedUp(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveRedLeft(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveRedDown(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         break;
                     case Utils.Shape.Vertical:
@@ -186,19 +190,19 @@ namespace Hakoiri
 
                         pos = TryMoveVerticalLeft(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveVerticalRight(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveVerticalUp(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveVerticalDown(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         break;
                     case Utils.Shape.Horizontal:
@@ -209,38 +213,38 @@ namespace Hakoiri
 
                         pos = TryMoveHorizontalUp(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveHorizontalLeft(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveHorizontalRight(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveHorizontalDown(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         break;
 
                     case Utils.Shape.Single:
                         pos = TryMoveSingleUp(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveSingleLeft(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveSingleRight(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveSingleDown(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         break;
                     default:
@@ -248,7 +252,6 @@ namespace Hakoiri
                 }
 
             } while (snapshot.Increment());
-            //while (!Solved && snapshot.Increment());
         }
 
         public static void Solve(Snapshot snapshot)
@@ -293,21 +296,21 @@ namespace Hakoiri
 
                         pos = TryMoveRedDown(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveRedRight(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
 
                         pos = TryMoveRedLeft(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveRedUp(snapshot);
                         if (pos.possible)
                         {
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
                         }
 
                         break;
@@ -320,19 +323,19 @@ namespace Hakoiri
 
                         pos = TryMoveVerticalLeft(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveVerticalRight(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveVerticalUp(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveVerticalDown(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         break;
                     case Utils.Shape.Horizontal:
@@ -343,38 +346,38 @@ namespace Hakoiri
 
                         pos = TryMoveHorizontalUp(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveHorizontalLeft(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveHorizontalRight(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveHorizontalDown(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         break;
 
                     case Utils.Shape.Single:
                         pos = TryMoveSingleUp(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveSingleLeft(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveSingleRight(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         pos = TryMoveSingleDown(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Push(pos.snapshot);
+                            SnapshotsStack.Enqueue(pos.snapshot);
 
                         break;
                     default:
