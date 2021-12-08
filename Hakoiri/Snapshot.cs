@@ -1,20 +1,18 @@
-﻿using System;
-using System.Text;
+﻿using System.Text;
 
 namespace Hakoiri
 {
     public class Snapshot
     {
-        // look indices
         public byte Row { get; set; }
         public byte Col { get; set; }
         public int Step { get; set; }
 
-        public byte[,] BoardSnapshot;
+        public byte[,] Board;
         public Snapshot refSnap;
         public Snapshot(Snapshot snapshot)
         {
-            BoardSnapshot = Utils.CopyBoard(snapshot.BoardSnapshot);
+            Board = Utils.CopyBoard(snapshot.Board);
             this.refSnap = snapshot;
             Row = 0;
             Col = 0;
@@ -23,7 +21,7 @@ namespace Hakoiri
 
         public Snapshot(byte[,] board)
         {
-            BoardSnapshot = Utils.CopyBoard(board);
+            Board = Utils.CopyBoard(board);
             Row = 0;
             Col = 0;
             Step = 1;
@@ -31,13 +29,13 @@ namespace Hakoiri
 
         public bool Increment()
         {
-            if(Row == Utils.MaxRow && Col == Utils.MaxCol)
+            if (Row == Utils.MaxRow && Col == Utils.MaxCol)
             { // we are at the end
                 return false;
             }
 
-            if(Col == Utils.MaxCol)
-            {
+            if (Col == Utils.MaxCol)
+            { //last column - fall one row down
                 Col = 0;
                 Row += 1;
             }
@@ -51,23 +49,23 @@ namespace Hakoiri
 
         public byte GetCell()
         {
-            return BoardSnapshot[Row, Col];
+            return Board[Row, Col];
         }
 
         public bool IsSolved()
         {
-            return BoardSnapshot[3, 1] == Utils.Red && BoardSnapshot[4, 2] == Utils.Red;
+            return Board[3, 1] == Utils.Red && Board[4, 2] == Utils.Red;
         }
 
         public string GetSnapshotHash()
         {
             var sb = new StringBuilder(); // can be extracted as static for perf
-            
+
             for (int i = 0; i <= Utils.MaxRow; i++)
             {
                 for (int j = 0; j <= Utils.MaxCol; j++)
                 {
-                    sb.Append((int)Utils.GetShape(BoardSnapshot[i, j]));
+                    sb.Append((int)Utils.GetShape(Board[i, j]));
                 }
             }
 
@@ -76,7 +74,7 @@ namespace Hakoiri
 
         public bool IsTopLeftSquare()
         {
-            if(Row < Utils.MaxRow && Col < Utils.MaxCol && BoardSnapshot[Row + 1, Col + 1] == Utils.Red)
+            if (Row < Utils.MaxRow && Col < Utils.MaxCol && Board[Row + 1, Col + 1] == Utils.Red)
             {
                 return true;
             }
@@ -86,7 +84,7 @@ namespace Hakoiri
 
         public bool IsTopmostVertical()
         {
-            if (Row < Utils.MaxRow && BoardSnapshot[Row + 1, Col] == BoardSnapshot[Row, Col])
+            if (Row < Utils.MaxRow && Board[Row + 1, Col] == Board[Row, Col])
             {
                 return true;
             }
@@ -96,19 +94,12 @@ namespace Hakoiri
 
         public bool IsLeftmostHorizontal()
         {
-            if (Col < Utils.MaxCol && BoardSnapshot[Row, Col + 1] == BoardSnapshot[Row, Col])
+            if (Col < Utils.MaxCol && Board[Row, Col + 1] == Board[Row, Col])
             {
                 return true;
             }
 
             return false;
         }
-
-        // try move indexes
-        // care outbounds
-        // handle end of possibilities -> aka backward
-
-        // save solution
-
     }
 }

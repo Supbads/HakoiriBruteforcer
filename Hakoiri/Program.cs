@@ -1,105 +1,92 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace Hakoiri
 {
     class Program
     {
-        static bool Solved = false;
-        static int ditchedSolutions = 0;
-        static HashSet<string> visitedBoards = new HashSet<string>(1000);
-        static Dictionary<string, int> visitedBoardsOptimal = new Dictionary<string, int>(20000); // should be 20k+ to avoid resizing
-        static Queue<Snapshot> SnapshotsStack = new Queue<Snapshot>(2000);
-        static List<Snapshot> backtrackSolutions = new List<Snapshot>(500);
-        static int solveInvocations = 0;
+        const bool UseOptimalSolutionConfig = true;
 
+        static bool Solved = false;
+        static int skippedSolutions = 0;
+        static int solveInvocations = 0;
         static int currentBestSolution = int.MaxValue;
+        static HashSet<string> visitedBoards = new HashSet<string>(1000);
+        static List<Snapshot> backtrackSolutions = new List<Snapshot>(500);
+
+        // should be 20k+ to avoid resizing
+        static Dictionary<string, int> visitedBoardsOptimal = new Dictionary<string, int>(20000);
+
+        // using a Stack instead of a Queue kills the performance of the alogirthm
+        static Queue<Snapshot> SavedSnapshots = new Queue<Snapshot>(2000);
+
 
         static void Main()
         {
+            Action<Snapshot> solveDelegate;
 
-            var level = Levels.Level7;
+            if (UseOptimalSolutionConfig)
+            {
+                solveDelegate = FindMostOptimalSolution;
+            }
+            else
+            {
+                solveDelegate = Solve;
+            }
+
+            var looger = new SnapshotLogger();
+
+            PrepareInitialBoardState(Levels.Level7);
             var sw = Stopwatch.StartNew();
-            var firstSnapshot = new Snapshot(level);
-            SnapshotsStack.Enqueue(firstSnapshot);
-            SolveStack();
+
+            StartSolvingSoltuions(solveDelegate);
 
             if (Solved)
             {
                 Console.WriteLine("Solved");
-                Console.WriteLine("ditched " + ditchedSolutions);
+                Console.WriteLine("Skipped " + skippedSolutions);
 
                 PrepareSolutionsChain();
                 Console.WriteLine("steps " + backtrackSolutions.Count);
-                //PrintAllRefSolutions();
-                //SaveRefSolutionsToTxt();
-
+                looger.SaveRefSolutionsToTxt(backtrackSolutions);
+                //looger.PrintAllRefSolutions();
             }
             else
             {
                 Console.WriteLine("No solution found");
             }
 
-            var elapsed = sw.ElapsedMilliseconds;
-            Console.WriteLine(elapsed);
+            var elapsedMs = sw.ElapsedMilliseconds;
+            Console.WriteLine($"Elapsed miliseconds: {elapsedMs}");
             Console.WriteLine("Solve Invocs: " + solveInvocations);
         }
 
-        private static void SaveRefSolutionsToTxt()
+        private static void PrepareInitialBoardState(byte[,] level)
         {
-            Console.WriteLine("saving ref solutions steps");
-            int step = 1;
-            StringBuilder sb = new StringBuilder();
-            foreach (var solution in backtrackSolutions)
-            {
-                sb.AppendLine("step " + step);
-                sb.AppendLine(StrSnapshot(solution));
-                sb.AppendLine();
-                step++;
-            }
-
-            File.WriteAllText($"{Directory.GetCurrentDirectory()}\\..\\..\\..\\solution.txt", sb.ToString());
-        }
-
-        private static void PrintAllRefSolutions()
-        {
-            Console.WriteLine("printing ref solutions steps");
-            int step = 1;
-            foreach (var solution in backtrackSolutions)
-            {
-                Console.WriteLine("step " + step);
-                PrintBoard(solution);
-                Console.WriteLine();
-                step++;
-            }
+            var firstSnapshot = new Snapshot(level);
+            SavedSnapshots.Enqueue(firstSnapshot);
         }
 
         private static void PrepareSolutionsChain()
         {
-            var thingie = backtrackSolutions.FirstOrDefault();
-            while (thingie.refSnap != null)
+            var currentSnapshot = backtrackSolutions.FirstOrDefault();
+            while (currentSnapshot.refSnap != null)
             {
-                backtrackSolutions.Add(thingie.refSnap);
-                thingie = thingie.refSnap;
+                backtrackSolutions.Add(currentSnapshot.refSnap);
+                currentSnapshot = currentSnapshot.refSnap;
             }
+
             backtrackSolutions.Reverse();
         }
 
-        public static void SolveStack()
+        public static void StartSolvingSoltuions(Action<Snapshot> Solve)
         {
-            while (SnapshotsStack.Count != 0)
+            while (SavedSnapshots.Count != 0)
             {
-                //if(SnapshotsStack.Count == 1)
-                //{
-                //    Console.WriteLine("tuke");
-                //}
-                var snapshot = SnapshotsStack.Dequeue();
-                FindMostOptimalSolution(snapshot);
-                //Solve(snapshot);
+                var snapshot = SavedSnapshots.Dequeue();
+                Solve(snapshot);
             }
         }
 
@@ -116,13 +103,12 @@ namespace Hakoiri
                     Solved = true;
                 }
 
-                //PrintBoard(snapshot);
                 return;
             }
 
             if (snapshot.Step >= currentBestSolution)
             {
-                ditchedSolutions++;
+                skippedSolutions++;
                 snapshot.refSnap = null;
                 return;
             }
@@ -130,7 +116,7 @@ namespace Hakoiri
             var positionHash = snapshot.GetSnapshotHash();
             if (visitedBoardsOptimal.ContainsKey(positionHash) && visitedBoardsOptimal[positionHash] <= snapshot.Step)
             {
-                ditchedSolutions++;
+                skippedSolutions++;
                 snapshot.refSnap = null;
                 return;
             }
@@ -167,19 +153,19 @@ namespace Hakoiri
 
                         pos = TryMoveRedRight(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveRedUp(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveRedLeft(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveRedDown(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         break;
                     case Utils.Shape.Vertical:
@@ -190,19 +176,19 @@ namespace Hakoiri
 
                         pos = TryMoveVerticalLeft(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveVerticalRight(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveVerticalUp(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveVerticalDown(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         break;
                     case Utils.Shape.Horizontal:
@@ -213,38 +199,38 @@ namespace Hakoiri
 
                         pos = TryMoveHorizontalUp(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveHorizontalLeft(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveHorizontalRight(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveHorizontalDown(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         break;
 
                     case Utils.Shape.Single:
                         pos = TryMoveSingleUp(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveSingleLeft(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveSingleRight(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveSingleDown(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         break;
                     default:
@@ -260,7 +246,7 @@ namespace Hakoiri
             var hash = snapshot.GetSnapshotHash();
             if (visitedBoards.Contains(hash))
             {
-                ditchedSolutions++;
+                skippedSolutions++;
                 snapshot.refSnap = null;
                 return;
             }
@@ -274,7 +260,6 @@ namespace Hakoiri
 
             if (snapshot.IsSolved())
             {
-                PrintBoard(snapshot);
                 backtrackSolutions.Add(snapshot);
                 Solved = true;
                 return;
@@ -296,21 +281,21 @@ namespace Hakoiri
 
                         pos = TryMoveRedDown(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveRedRight(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
 
                         pos = TryMoveRedLeft(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveRedUp(snapshot);
                         if (pos.possible)
                         {
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
                         }
 
                         break;
@@ -323,19 +308,19 @@ namespace Hakoiri
 
                         pos = TryMoveVerticalLeft(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveVerticalRight(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveVerticalUp(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveVerticalDown(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         break;
                     case Utils.Shape.Horizontal:
@@ -346,38 +331,38 @@ namespace Hakoiri
 
                         pos = TryMoveHorizontalUp(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveHorizontalLeft(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveHorizontalRight(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveHorizontalDown(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         break;
 
                     case Utils.Shape.Single:
                         pos = TryMoveSingleUp(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveSingleLeft(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveSingleRight(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         pos = TryMoveSingleDown(snapshot);
                         if (pos.possible)
-                            SnapshotsStack.Enqueue(pos.snapshot);
+                            SavedSnapshots.Enqueue(pos.snapshot);
 
                         break;
                     default:
@@ -390,11 +375,11 @@ namespace Hakoiri
         #region blueMovement
         public static (bool, Snapshot) TryMoveSingleUp(Snapshot board)
         {
-            if (board.Row > 0 && board.BoardSnapshot[board.Row - 1, board.Col] == 0)
+            if (board.Row > 0 && board.Board[board.Row - 1, board.Col] == 0)
             {
                 var newSnapshot = new Snapshot(board);
-                newSnapshot.BoardSnapshot[board.Row - 1, board.Col] = 1;
-                newSnapshot.BoardSnapshot[board.Row, board.Col] = 0;
+                newSnapshot.Board[board.Row - 1, board.Col] = 1;
+                newSnapshot.Board[board.Row, board.Col] = 0;
                 return (true, newSnapshot);
             }
 
@@ -403,11 +388,11 @@ namespace Hakoiri
 
         public static (bool, Snapshot) TryMoveSingleLeft(Snapshot board)
         {
-            if (board.Col > 0 && board.BoardSnapshot[board.Row, board.Col - 1] == 0)
+            if (board.Col > 0 && board.Board[board.Row, board.Col - 1] == 0)
             {
                 var newSnapshot = new Snapshot(board);
-                newSnapshot.BoardSnapshot[board.Row, board.Col - 1] = 1;
-                newSnapshot.BoardSnapshot[board.Row, board.Col] = 0;
+                newSnapshot.Board[board.Row, board.Col - 1] = 1;
+                newSnapshot.Board[board.Row, board.Col] = 0;
                 return (true, newSnapshot);
             }
 
@@ -416,11 +401,11 @@ namespace Hakoiri
 
         public static (bool, Snapshot) TryMoveSingleRight(Snapshot board)
         {
-            if (board.Col < Utils.MaxCol && board.BoardSnapshot[board.Row, board.Col + 1] == 0)
+            if (board.Col < Utils.MaxCol && board.Board[board.Row, board.Col + 1] == 0)
             {
                 var newSnapshot = new Snapshot(board);
-                newSnapshot.BoardSnapshot[board.Row, board.Col + 1] = 1;
-                newSnapshot.BoardSnapshot[board.Row, board.Col] = 0;
+                newSnapshot.Board[board.Row, board.Col + 1] = 1;
+                newSnapshot.Board[board.Row, board.Col] = 0;
                 return (true, newSnapshot);
             }
 
@@ -429,11 +414,11 @@ namespace Hakoiri
 
         public static (bool, Snapshot) TryMoveSingleDown(Snapshot board)
         {
-            if (board.Row < Utils.MaxRow && board.BoardSnapshot[board.Row + 1, board.Col] == 0)
+            if (board.Row < Utils.MaxRow && board.Board[board.Row + 1, board.Col] == 0)
             {
                 var newSnapshot = new Snapshot(board);
-                newSnapshot.BoardSnapshot[board.Row + 1, board.Col] = 1;
-                newSnapshot.BoardSnapshot[board.Row, board.Col] = 0;
+                newSnapshot.Board[board.Row + 1, board.Col] = 1;
+                newSnapshot.Board[board.Row, board.Col] = 0;
                 return (true, newSnapshot);
             }
 
@@ -446,14 +431,14 @@ namespace Hakoiri
         //we always assume that we're at top left of square and its position is valid
         public static (bool, Snapshot) TryMoveRedDown(Snapshot board)
         {
-            if (board.Row + 1 < Utils.MaxRow && board.BoardSnapshot[board.Row + 2, board.Col] == 0 && board.BoardSnapshot[board.Row + 2, board.Col + 1] == 0)
+            if (board.Row + 1 < Utils.MaxRow && board.Board[board.Row + 2, board.Col] == 0 && board.Board[board.Row + 2, board.Col + 1] == 0)
             {
                 var newSnapshot = new Snapshot(board);
-                newSnapshot.BoardSnapshot[board.Row + 2, board.Col] = Utils.Red;
-                newSnapshot.BoardSnapshot[board.Row + 2, board.Col + 1] = Utils.Red;
+                newSnapshot.Board[board.Row + 2, board.Col] = Utils.Red;
+                newSnapshot.Board[board.Row + 2, board.Col + 1] = Utils.Red;
 
-                newSnapshot.BoardSnapshot[board.Row, board.Col] = 0;
-                newSnapshot.BoardSnapshot[board.Row, board.Col + 1] = 0;
+                newSnapshot.Board[board.Row, board.Col] = 0;
+                newSnapshot.Board[board.Row, board.Col + 1] = 0;
                 return (true, newSnapshot);
             }
 
@@ -462,14 +447,14 @@ namespace Hakoiri
 
         public static (bool, Snapshot) TryMoveRedRight(Snapshot board)
         {
-            if (board.Col + 1 < Utils.MaxCol && board.BoardSnapshot[board.Row, board.Col + 2] == 0 && board.BoardSnapshot[board.Row + 1, board.Col + 2] == 0)
+            if (board.Col + 1 < Utils.MaxCol && board.Board[board.Row, board.Col + 2] == 0 && board.Board[board.Row + 1, board.Col + 2] == 0)
             {
                 var newSnapshot = new Snapshot(board);
-                newSnapshot.BoardSnapshot[board.Row, board.Col + 2] = Utils.Red;
-                newSnapshot.BoardSnapshot[board.Row + 1, board.Col + 2] = Utils.Red;
+                newSnapshot.Board[board.Row, board.Col + 2] = Utils.Red;
+                newSnapshot.Board[board.Row + 1, board.Col + 2] = Utils.Red;
 
-                newSnapshot.BoardSnapshot[board.Row, board.Col] = 0;
-                newSnapshot.BoardSnapshot[board.Row + 1, board.Col] = 0;
+                newSnapshot.Board[board.Row, board.Col] = 0;
+                newSnapshot.Board[board.Row + 1, board.Col] = 0;
                 return (true, newSnapshot);
             }
 
@@ -478,14 +463,14 @@ namespace Hakoiri
 
         public static (bool, Snapshot) TryMoveRedLeft(Snapshot board)
         {
-            if (board.Col > 0 && board.BoardSnapshot[board.Row, board.Col - 1] == 0 && board.BoardSnapshot[board.Row + 1, board.Col - 1] == 0)
+            if (board.Col > 0 && board.Board[board.Row, board.Col - 1] == 0 && board.Board[board.Row + 1, board.Col - 1] == 0)
             {
                 var newSnapshot = new Snapshot(board);
-                newSnapshot.BoardSnapshot[board.Row, board.Col - 1] = Utils.Red;
-                newSnapshot.BoardSnapshot[board.Row + 1, board.Col - 1] = Utils.Red;
+                newSnapshot.Board[board.Row, board.Col - 1] = Utils.Red;
+                newSnapshot.Board[board.Row + 1, board.Col - 1] = Utils.Red;
 
-                newSnapshot.BoardSnapshot[board.Row, board.Col + 1] = 0;
-                newSnapshot.BoardSnapshot[board.Row + 1, board.Col + 1] = 0;
+                newSnapshot.Board[board.Row, board.Col + 1] = 0;
+                newSnapshot.Board[board.Row + 1, board.Col + 1] = 0;
                 return (true, newSnapshot);
             }
 
@@ -494,14 +479,14 @@ namespace Hakoiri
 
         public static (bool, Snapshot) TryMoveRedUp(Snapshot board)
         {
-            if (board.Row > 0 && board.BoardSnapshot[board.Row - 1, board.Col] == 0 && board.BoardSnapshot[board.Row - 1, board.Col + 1] == 0)
+            if (board.Row > 0 && board.Board[board.Row - 1, board.Col] == 0 && board.Board[board.Row - 1, board.Col + 1] == 0)
             {
                 var newSnapshot = new Snapshot(board);
-                newSnapshot.BoardSnapshot[board.Row - 1, board.Col] = Utils.Red;
-                newSnapshot.BoardSnapshot[board.Row - 1, board.Col + 1] = Utils.Red;
+                newSnapshot.Board[board.Row - 1, board.Col] = Utils.Red;
+                newSnapshot.Board[board.Row - 1, board.Col + 1] = Utils.Red;
 
-                newSnapshot.BoardSnapshot[board.Row + 1, board.Col] = 0;
-                newSnapshot.BoardSnapshot[board.Row + 1, board.Col + 1] = 0;
+                newSnapshot.Board[board.Row + 1, board.Col] = 0;
+                newSnapshot.Board[board.Row + 1, board.Col + 1] = 0;
                 return (true, newSnapshot);
             }
 
@@ -511,18 +496,19 @@ namespace Hakoiri
         #endregion
 
         #region horizontalMovement
+        //we always assume that we're at left of horizontal piece and its position is valid
         public static (bool, Snapshot) TryMoveHorizontalUp(Snapshot board)
         {
-            if (board.Row > 0 && board.BoardSnapshot[board.Row - 1, board.Col] == 0 && board.BoardSnapshot[board.Row - 1, board.Col + 1] == 0)
+            if (board.Row > 0 && board.Board[board.Row - 1, board.Col] == 0 && board.Board[board.Row - 1, board.Col + 1] == 0)
             {
                 var current = board.GetCell();
 
                 var newSnapshot = new Snapshot(board);
-                newSnapshot.BoardSnapshot[board.Row - 1, board.Col] = current;
-                newSnapshot.BoardSnapshot[board.Row - 1, board.Col + 1] = current;
+                newSnapshot.Board[board.Row - 1, board.Col] = current;
+                newSnapshot.Board[board.Row - 1, board.Col + 1] = current;
 
-                newSnapshot.BoardSnapshot[board.Row, board.Col] = 0;
-                newSnapshot.BoardSnapshot[board.Row, board.Col + 1] = 0;
+                newSnapshot.Board[board.Row, board.Col] = 0;
+                newSnapshot.Board[board.Row, board.Col + 1] = 0;
                 return (true, newSnapshot);
             }
 
@@ -531,16 +517,16 @@ namespace Hakoiri
 
         public static (bool, Snapshot) TryMoveHorizontalDown(Snapshot board)
         {
-            if (board.Row < Utils.MaxRow && board.BoardSnapshot[board.Row + 1, board.Col] == 0 && board.BoardSnapshot[board.Row + 1, board.Col + 1] == 0)
+            if (board.Row < Utils.MaxRow && board.Board[board.Row + 1, board.Col] == 0 && board.Board[board.Row + 1, board.Col + 1] == 0)
             {
                 var current = board.GetCell();
 
                 var newSnapshot = new Snapshot(board);
-                newSnapshot.BoardSnapshot[board.Row + 1, board.Col] = current;
-                newSnapshot.BoardSnapshot[board.Row + 1, board.Col + 1] = current;
+                newSnapshot.Board[board.Row + 1, board.Col] = current;
+                newSnapshot.Board[board.Row + 1, board.Col + 1] = current;
 
-                newSnapshot.BoardSnapshot[board.Row, board.Col] = 0;
-                newSnapshot.BoardSnapshot[board.Row, board.Col + 1] = 0;
+                newSnapshot.Board[board.Row, board.Col] = 0;
+                newSnapshot.Board[board.Row, board.Col + 1] = 0;
                 return (true, newSnapshot);
             }
 
@@ -549,14 +535,14 @@ namespace Hakoiri
 
         public static (bool, Snapshot) TryMoveHorizontalLeft(Snapshot board)
         {
-            if (board.Col > 0 && board.BoardSnapshot[board.Row, board.Col - 1] == 0)
+            if (board.Col > 0 && board.Board[board.Row, board.Col - 1] == 0)
             {
                 var current = board.GetCell();
 
                 var newSnapshot = new Snapshot(board);
-                newSnapshot.BoardSnapshot[board.Row, board.Col - 1] = current;
+                newSnapshot.Board[board.Row, board.Col - 1] = current;
 
-                newSnapshot.BoardSnapshot[board.Row, board.Col + 1] = 0;
+                newSnapshot.Board[board.Row, board.Col + 1] = 0;
                 return (true, newSnapshot);
             }
 
@@ -565,14 +551,14 @@ namespace Hakoiri
 
         public static (bool, Snapshot) TryMoveHorizontalRight(Snapshot board)
         {
-            if (board.Col + 1 < Utils.MaxCol && board.BoardSnapshot[board.Row, board.Col + 2] == 0)
+            if (board.Col + 1 < Utils.MaxCol && board.Board[board.Row, board.Col + 2] == 0)
             {
                 var current = board.GetCell();
 
                 var newSnapshot = new Snapshot(board);
-                newSnapshot.BoardSnapshot[board.Row, board.Col + 2] = current;
+                newSnapshot.Board[board.Row, board.Col + 2] = current;
 
-                newSnapshot.BoardSnapshot[board.Row, board.Col] = 0;
+                newSnapshot.Board[board.Row, board.Col] = 0;
                 return (true, newSnapshot);
             }
 
@@ -582,18 +568,19 @@ namespace Hakoiri
         #endregion
 
         #region verticalMovement
+        //we always assume that we're at top of vertical piece and its position is valid
         public static (bool, Snapshot) TryMoveVerticalLeft(Snapshot board)
         {
-            if (board.Col > 0 && board.BoardSnapshot[board.Row, board.Col - 1] == 0 && board.BoardSnapshot[board.Row + 1, board.Col - 1] == 0)
+            if (board.Col > 0 && board.Board[board.Row, board.Col - 1] == 0 && board.Board[board.Row + 1, board.Col - 1] == 0)
             {
                 var current = board.GetCell();
 
                 var newSnapshot = new Snapshot(board);
-                newSnapshot.BoardSnapshot[board.Row, board.Col - 1] = current;
-                newSnapshot.BoardSnapshot[board.Row + 1, board.Col - 1] = current;
+                newSnapshot.Board[board.Row, board.Col - 1] = current;
+                newSnapshot.Board[board.Row + 1, board.Col - 1] = current;
 
-                newSnapshot.BoardSnapshot[board.Row, board.Col] = 0;
-                newSnapshot.BoardSnapshot[board.Row + 1, board.Col] = 0;
+                newSnapshot.Board[board.Row, board.Col] = 0;
+                newSnapshot.Board[board.Row + 1, board.Col] = 0;
                 return (true, newSnapshot);
             }
 
@@ -602,16 +589,16 @@ namespace Hakoiri
 
         public static (bool, Snapshot) TryMoveVerticalRight(Snapshot board)
         {
-            if (board.Col < Utils.MaxCol && board.BoardSnapshot[board.Row, board.Col + 1] == 0 && board.BoardSnapshot[board.Row + 1, board.Col + 1] == 0)
+            if (board.Col < Utils.MaxCol && board.Board[board.Row, board.Col + 1] == 0 && board.Board[board.Row + 1, board.Col + 1] == 0)
             {
                 var current = board.GetCell();
 
                 var newSnapshot = new Snapshot(board);
-                newSnapshot.BoardSnapshot[board.Row, board.Col + 1] = current;
-                newSnapshot.BoardSnapshot[board.Row + 1, board.Col + 1] = current;
+                newSnapshot.Board[board.Row, board.Col + 1] = current;
+                newSnapshot.Board[board.Row + 1, board.Col + 1] = current;
 
-                newSnapshot.BoardSnapshot[board.Row, board.Col] = 0;
-                newSnapshot.BoardSnapshot[board.Row + 1, board.Col] = 0;
+                newSnapshot.Board[board.Row, board.Col] = 0;
+                newSnapshot.Board[board.Row + 1, board.Col] = 0;
                 return (true, newSnapshot);
             }
 
@@ -620,14 +607,14 @@ namespace Hakoiri
 
         public static (bool, Snapshot) TryMoveVerticalUp(Snapshot board)
         {
-            if (board.Row > 0 && board.BoardSnapshot[board.Row - 1, board.Col] == 0)
+            if (board.Row > 0 && board.Board[board.Row - 1, board.Col] == 0)
             {
                 var current = board.GetCell();
 
                 var newSnapshot = new Snapshot(board);
-                newSnapshot.BoardSnapshot[board.Row - 1, board.Col] = current;
+                newSnapshot.Board[board.Row - 1, board.Col] = current;
 
-                newSnapshot.BoardSnapshot[board.Row + 1, board.Col] = 0;
+                newSnapshot.Board[board.Row + 1, board.Col] = 0;
                 return (true, newSnapshot);
             }
 
@@ -636,48 +623,20 @@ namespace Hakoiri
 
         public static (bool, Snapshot) TryMoveVerticalDown(Snapshot board)
         {
-            if (board.Row + 1 < Utils.MaxRow && board.BoardSnapshot[board.Row + 2, board.Col] == 0)
+            if (board.Row + 1 < Utils.MaxRow && board.Board[board.Row + 2, board.Col] == 0)
             {
                 var current = board.GetCell();
 
                 var newSnapshot = new Snapshot(board);
-                newSnapshot.BoardSnapshot[board.Row + 2, board.Col] = current;
+                newSnapshot.Board[board.Row + 2, board.Col] = current;
 
-                newSnapshot.BoardSnapshot[board.Row, board.Col] = 0;
+                newSnapshot.Board[board.Row, board.Col] = 0;
                 return (true, newSnapshot);
             }
 
             return (false, null);
         }
         #endregion
-
-        public static void PrintBoard(Snapshot snapshot)
-        {
-            for (int i = 0; i <= Utils.MaxRow; i++)
-            {
-                for (int j = 0; j <= Utils.MaxCol; j++)
-                {
-                    Console.Write(snapshot.BoardSnapshot[i, j].ToString().PadRight(3));
-                }
-                Console.WriteLine();
-            }
-        }
-
-        public static string StrSnapshot(Snapshot snapshot)
-        {
-            StringBuilder sb = new StringBuilder();
-
-            for (int i = 0; i <= Utils.MaxRow; i++)
-            {
-                for (int j = 0; j <= Utils.MaxCol; j++)
-                {
-                    sb.Append(snapshot.BoardSnapshot[i, j].ToString().PadRight(3));
-                }
-                sb.AppendLine();
-            }
-
-            return sb.ToString();
-        }
 
     }
 }
